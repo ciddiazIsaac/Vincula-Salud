@@ -1,7 +1,7 @@
-.PHONY: help setup test build run lint proto emulators-up
+.PHONY: help setup test build run lint proto emulators-up run-bridge
 
 help:
-	@echo "Comandos disponibles: setup, test, build, run, lint, proto, emulators-up"
+	@echo "Comandos disponibles: setup, test, build, run, lint, proto, emulators-up, run-bridge"
 
 setup:
 	go mod download
@@ -26,3 +26,6 @@ proto:
 emulators-up:
 	gcloud beta emulators pubsub start --project=vincula-salud-dev --host-port=localhost:8085 &
 	gcloud beta emulators spanner start --host-port=localhost:9010 &
+
+run-bridge:
+	go run cmd/legacy_bridge/main.go
