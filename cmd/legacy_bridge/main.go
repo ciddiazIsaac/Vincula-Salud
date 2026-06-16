@@ -9,7 +9,6 @@ import (
     "io"
     "log"
     "os"
-    "time"
     
     clinicalv1 "github.com/minsal/vincula/api/v1/clinical"
     "google.golang.org/grpc"
