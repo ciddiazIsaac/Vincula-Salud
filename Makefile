@@ -33,3 +33,11 @@ spanner-init:
 
 run-bridge:
 	go run cmd/legacy_bridge/main.go
+
+run-healthcheck:
+	go run cmd/healthcheck/main.go
+
+# Ejecutar ambos servidores en paralelo (requiere terminal multiplexor)
+run-all:
+	@echo "Starting gRPC server and healthcheck..."
+	@make run & make run-healthcheck
