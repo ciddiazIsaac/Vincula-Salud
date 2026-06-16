@@ -16,6 +16,7 @@ import (
 )
 
 type SpannerClinicalStore struct {
+	clinicalv1.UnimplementedClinicalRecordServiceServer
     client *spanner.Client
 }
 

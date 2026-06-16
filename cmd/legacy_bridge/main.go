@@ -2,26 +2,50 @@ package main
 
 import (
     "context"
+    "crypto/tls"
+    "crypto/x509"
     "encoding/csv"
     "encoding/json"
     "io"
     "log"
     "os"
+    "time"
     
     clinicalv1 "github.com/minsal/vincula/api/v1/clinical"
     "google.golang.org/grpc"
-    "google.golang.org/grpc/credentials/insecure"
+    "google.golang.org/grpc/credentials"
     "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func main() {
-    conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+    // Cargar certificado del cliente
+    cert, err := tls.LoadX509KeyPair("certs/client.crt", "certs/client.key")
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    caCert, err := os.ReadFile("certs/ca.crt")
+    if err != nil {
+        log.Fatal(err)
+    }
+    caPool := x509.NewCertPool()
+    caPool.AppendCertsFromPEM(caCert)
+    
+    tlsConfig := &tls.Config{
+        Certificates: []tls.Certificate{cert},
+        RootCAs:      caPool,
+        MinVersion:   tls.VersionTLS12,
+    }
+    creds := credentials.NewTLS(tlsConfig)
+    
+    conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(creds))
     if err != nil {
         log.Fatal(err)
     }
     defer conn.Close()
     client := clinicalv1.NewClinicalRecordServiceClient(conn)
     
+    // Resto igual que antes
     f, err := os.Open("data/legacy_patients.csv")
     if err != nil {
         log.Fatal(err)
@@ -42,7 +66,6 @@ func main() {
         alergia := record[2]
         diagnostico := record[3]
         
-        // Enviar alergia como evento
         if alergia != "ninguna" {
             data, _ := json.Marshal(map[string]string{"alergia": alergia})
             req := &clinicalv1.RecordClinicalEventRequest{
@@ -54,10 +77,9 @@ func main() {
             }
             _, err := client.RecordClinicalEvent(context.Background(), req)
             if err != nil {
-                log.Printf("error enviando alergia para %s: %v", run, err)
+                log.Printf("error: %v", err)
             }
         }
-        // Enviar diagnóstico
         data, _ := json.Marshal(map[string]string{"diagnostico": diagnostico})
         req := &clinicalv1.RecordClinicalEventRequest{
             PatientRun:       run,
@@ -68,8 +90,8 @@ func main() {
         }
         _, err = client.RecordClinicalEvent(context.Background(), req)
         if err != nil {
-            log.Printf("error enviando diagnostico para %s: %v", run, err)
+            log.Printf("error: %v", err)
         }
     }
-    log.Println("Legacy bridge terminó de enviar datos")
+    log.Println("Legacy bridge con mTLS completado")
 }

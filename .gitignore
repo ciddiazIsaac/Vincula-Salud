@@ -33,3 +33,6 @@ coverage.out
 *.tfstate
 *.tfstate.*
 .terraform/
+
+# Certificados mTLS
+certs/
