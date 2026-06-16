@@ -1,0 +1,35 @@
+# Binarios y dependencias
+*.exe
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+node_modules/
+vendor/
+
+# Entornos y secretos
+.env
+.env.local
+*.key
+*.pem
+*.cert
+secrets.yaml
+
+# Logs y temporales
+*.log
+*.tmp
+*.swp
+.DS_Store
+coverage.out
+*.test
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Infraestructura local (evita subir planes de Terraform)
+*.tfstate
+*.tfstate.*
+.terraform/
