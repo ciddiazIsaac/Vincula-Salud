@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vinca-config
+  namespace: vinca-system
+data:
+  SPANNER_DATABASE: "projects/vincula-salud-prod/instances/vincula-instance/databases/vincula_db"
+  LOG_LEVEL: "info"
+  GRPC_PORT: "50051"
+  HEALTH_PORT: "8080"

@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clinical-record-service
+  namespace: vinca-system
+  labels:
+    app: vinca
+    component: clinical-record
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vinca
+      component: clinical-record
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: vinca
+        component: clinical-record
+    spec:
+      containers:
+      - name: clinical-record
+        image: gcr.io/vincula-salud/clinical-record:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50051
+          name: grpc
+        - containerPort: 8080
+          name: health
+        envFrom:
+        - configMapRef:
+            name: vinca-config
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: certs
+          mountPath: /app/certs
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - grpc_health_probe
+            - -addr=:50051
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - grpc_health_probe
+            - -addr=:50051
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        startupProbe:
+          exec:
+            command:
+            - grpc_health_probe
+            - -addr=:50051
+          initialDelaySeconds: 0
+          periodSeconds: 2
+          failureThreshold: 30
+      volumes:
+      - name: certs
+        secret:
+          secretName: vinca-certs
+      terminationGracePeriodSeconds: 60
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: clinical-record-hpa
+  namespace: vinca-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: clinical-record-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

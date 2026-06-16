@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clinical-record-ingress
+  namespace: vinca-system
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/auth-tls-pass-certificate-to-upstream: "true"
+    nginx.ingress.kubernetes.io/auth-tls-verify-client: "on"
+    nginx.ingress.kubernetes.io/auth-tls-secret: "vinca-system/vinca-certs"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.vincula-salud.cl
+    secretName: vinca-tls
+  rules:
+  - host: api.vincula-salud.cl
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: clinical-record-service
+            port:
+              number: 50051

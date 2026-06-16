@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: vinca-dev
+
+bases:
+- ../../base
+
+patches:
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/image
+      value: gcr.io/vincula-salud-dev/clinical-record:dev
+    - op: replace
+      path: /spec/template/spec/containers/0/envFrom/0/configMapRef/name
+      value: vinca-config-dev
+  target:
+    kind: Deployment
+    name: clinical-record-service
+
+- patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 1
+  target:
+    kind: Deployment
+    name: clinical-record-service

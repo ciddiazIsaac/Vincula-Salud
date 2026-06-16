@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: clinical-record-service
+  namespace: vinca-system
+  labels:
+    app: vinca
+    component: clinical-record
+spec:
+  selector:
+    app: vinca
+    component: clinical-record
+  ports:
+  - name: grpc
+    port: 50051
+    targetPort: 50051
+  - name: health
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clinical-record-headless
+  namespace: vinca-system
+  labels:
+    app: vinca
+    component: clinical-record
+spec:
+  clusterIP: None
+  selector:
+    app: vinca
+    component: clinical-record
+  ports:
+  - name: grpc
+    port: 50051
+    targetPort: 50051
