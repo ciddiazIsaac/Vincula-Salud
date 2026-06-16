@@ -22,6 +22,10 @@ spec:
       labels:
         app: vinca
         component: clinical-record
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: clinical-record
@@ -32,6 +36,8 @@ spec:
           name: grpc
         - containerPort: 8080
           name: health
+        - containerPort: 9090
+          name: metrics
         envFrom:
         - configMapRef:
             name: vinca-config

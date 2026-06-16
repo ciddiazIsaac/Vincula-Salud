@@ -22,7 +22,7 @@ COPY --from=builder /bin/healthcheck /usr/local/bin/
 
 COPY certs/ /app/certs/
 
-EXPOSE 50051 8080
+EXPOSE 50051 8080 9090
 
 # Health check usando grpc_health_probe
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \

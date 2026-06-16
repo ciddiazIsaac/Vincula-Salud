@@ -6,6 +6,7 @@ import (
     "crypto/x509"
     "log"
     "net"
+    "net/http"
     "os"
     "sync/atomic"
     
@@ -13,6 +14,9 @@ import (
     "google.golang.org/grpc/credentials"
     "google.golang.org/grpc/health"
     "google.golang.org/grpc/health/grpc_health_v1"
+    
+    grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+    "github.com/prometheus/client_golang/prometheus/promhttp"
     
     "github.com/minsal/vincula/internal/adapters"
     clinicalv1 "github.com/minsal/vincula/api/v1/clinical"
@@ -56,10 +60,26 @@ func main() {
     }
     
     creds := credentials.NewTLS(tlsConfig)
-    srv := grpc.NewServer(grpc.Creds(creds))
+    srv := grpc.NewServer(
+        grpc.Creds(creds),
+        grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
+        grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+    )
     
     // Registrar servicios
     clinicalv1.RegisterClinicalRecordServiceServer(srv, store)
+    
+    // Registrar métricas gRPC de Prometheus
+    grpc_prometheus.Register(srv)
+    
+    // Servidor HTTP para métricas de Prometheus
+    go func() {
+        http.Handle("/metrics", promhttp.Handler())
+        log.Println("Metrics server on :9090")
+        if err := http.ListenAndServe(":9090", nil); err != nil {
+            log.Printf("Failed to serve metrics: %v", err)
+        }
+    }()
     
     // Health check gRPC estándar
     healthSrv := health.NewServer()
