@@ -1,3 +1,3 @@
-module github.com/minsal/vincula/clinical-record
+module github.com/minsal/vincula
 
 go 1.21
