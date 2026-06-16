@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package vinca.clinical.v1;
+
+option go_package = "github.com/minsal/vincula/api/v1/clinical;clinicalv1";
+
+import "google/protobuf/timestamp.proto";
+
+service ClinicalRecordService {
+  rpc GetPatientSummary(GetPatientSummaryRequest) returns (PatientSummary);
+  rpc RecordClinicalEvent(RecordClinicalEventRequest) returns (ClinicalEvent);
+  rpc ListClinicalEvents(ListClinicalEventsRequest) returns (ListClinicalEventsResponse);
+  rpc RevokeConsent(RevokeConsentRequest) returns (RevokeConsentResponse);
+}
+
+message GetPatientSummaryRequest {
+  string patient_run = 1;
+  string requester_hospital_id = 2;
+}
+
+message PatientSummary {
+  string patient_run = 1;
+  repeated string active_allergies = 2;
+  repeated string active_diagnoses = 3;
+  repeated string active_medications = 4;
+  google.protobuf.Timestamp last_update = 5;
+}
+
+message RecordClinicalEventRequest {
+  string patient_run = 1;
+  string event_type = 2;
+  bytes event_data_json = 3;
+  string author_credential = 4;
+  google.protobuf.Timestamp event_timestamp = 5;
+}
+
+message ClinicalEvent {
+  string event_id = 1;
+  string patient_run = 2;
+  string event_type = 3;
+  bytes event_data_json = 4;
+  string author_credential = 5;
+  google.protobuf.Timestamp recorded_at = 6;
+  google.protobuf.Timestamp event_timestamp = 7;
+}
+
+message ListClinicalEventsRequest {
+  string patient_run = 1;
+  string event_type_filter = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListClinicalEventsResponse {
+  repeated ClinicalEvent events = 1;
+  string next_page_token = 2;
+}
+
+message RevokeConsentRequest {
+  string patient_run = 1;
+  string data_category = 2;
+}
+
+message RevokeConsentResponse {
+  bool success = 1;
+  string message = 2;
+}
