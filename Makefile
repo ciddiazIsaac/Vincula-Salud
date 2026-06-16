@@ -1,7 +1,7 @@
-.PHONY: help setup test build run lint proto
+.PHONY: help setup test build run lint proto emulators-up
 
 help:
-	@echo "Comandos disponibles: setup, test, build, run, lint, proto"
+	@echo "Comandos disponibles: setup, test, build, run, lint, proto, emulators-up"
 
 setup:
 	go mod download
@@ -22,3 +22,7 @@ lint:
 
 proto:
 	protoc --go_out=. --go-grpc_out=. api/v1/*.proto
+
+emulators-up:
+	gcloud beta emulators pubsub start --project=vincula-salud-dev --host-port=localhost:8085 &
+	gcloud beta emulators spanner start --host-port=localhost:9010 &
