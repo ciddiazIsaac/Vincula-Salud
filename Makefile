@@ -7,9 +7,16 @@ setup:
 	go mod download
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
 
 test:
 	go test -race -coverprofile=coverage.out ./...
+
+test-integration:
+	go test -tags=integration -v ./tests/integration/...
+
+load-test:
+	k6 run --ssl-client-cert certs/client.crt --ssl-client-key certs/client.key tests/load/grpc_load_test.js
 
 build:
 	go build -o bin/clinical-record ./cmd/server
@@ -21,7 +28,14 @@ lint:
 	golangci-lint run
 
 proto:
-	protoc --go_out=. --go-grpc_out=. api/v1/*.proto
+	protoc -I. -Ithird_party --go_out=. --go-grpc_out=. api/v1/*.proto
+
+swagger:
+	mkdir -p docs
+	protoc -I. -Ithird_party --openapiv2_out=docs \
+		--openapiv2_opt logtostderr=true \
+		--openapiv2_opt generate_unbound_methods=true \
+		api/v1/*.proto
 
 emulators-up:
 	gcloud beta emulators pubsub start --project=vincula-salud-dev --host-port=localhost:8085 &

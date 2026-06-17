@@ -5,12 +5,34 @@ package vinca.clinical.v1;
 option go_package = "github.com/minsal/vincula/api/v1/clinical;clinicalv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 
 service ClinicalRecordService {
-  rpc GetPatientSummary(GetPatientSummaryRequest) returns (PatientSummary);
-  rpc RecordClinicalEvent(RecordClinicalEventRequest) returns (ClinicalEvent);
-  rpc ListClinicalEvents(ListClinicalEventsRequest) returns (ListClinicalEventsResponse);
-  rpc RevokeConsent(RevokeConsentRequest) returns (RevokeConsentResponse);
+  rpc GetPatientSummary(GetPatientSummaryRequest) returns (PatientSummary) {
+    option (google.api.http) = {
+      get: "/v1/patients/{patient_run}/summary"
+    };
+  }
+
+  rpc RecordClinicalEvent(RecordClinicalEventRequest) returns (ClinicalEvent) {
+    option (google.api.http) = {
+      post: "/v1/patients/{patient_run}/events"
+      body: "*"
+    };
+  }
+
+  rpc ListClinicalEvents(ListClinicalEventsRequest) returns (ListClinicalEventsResponse) {
+    option (google.api.http) = {
+      get: "/v1/patients/{patient_run}/events"
+    };
+  }
+
+  rpc RevokeConsent(RevokeConsentRequest) returns (RevokeConsentResponse) {
+    option (google.api.http) = {
+      post: "/v1/patients/{patient_run}/consent:revoke"
+      body: "*"
+    };
+  }
 }
 
 message GetPatientSummaryRequest {

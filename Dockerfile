@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
@@ -15,12 +15,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/healthcheck ./cmd
 # Final stage
 FROM alpine:3.18
 
-RUN apk add --no-cache ca-certificates grpc-health-probe
+WORKDIR /app
 
+RUN apk add --no-cache ca-certificates wget && \
+    wget -qO/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.24/grpc_health_probe-linux-amd64 && \
+    chmod +x /bin/grpc_health_probe
 COPY --from=builder /bin/clinical-record /usr/local/bin/
 COPY --from=builder /bin/healthcheck /usr/local/bin/
-
-COPY certs/ /app/certs/
 
 EXPOSE 50051 8080 9090
 
