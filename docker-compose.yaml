@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  spanner-emulator:
+    image: gcr.io/cloud-spanner-emulator/emulator:latest
+    ports:
+      - "9010:9010"
+      - "9020:9020"
+    networks:
+      - vincula-net
+
+  spanner-init:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:alpine
+    depends_on:
+      - spanner-emulator
+    networks:
+      - vincula-net
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for Spanner emulator to start...';
+      sleep 5;
+      gcloud config set auth/disable_credentials true;
+      gcloud config set project vincula-salud-dev;
+      gcloud config set api_endpoint_overrides/spanner http://spanner-emulator:9020/;
+      gcloud spanner instances create vincula-instance --config=emulator-config --description='Dev Instance' --nodes=1;
+      gcloud spanner databases create vincula_db --instance=vincula-instance --ddl='CREATE TABLE ClinicalEvents (PatientRun STRING(MAX) NOT NULL, EventId STRING(MAX) NOT NULL, EventType STRING(MAX), EventDataJson BYTES(MAX), AuthorCredential STRING(MAX), RecordedAt TIMESTAMP, EventTimestamp TIMESTAMP) PRIMARY KEY(PatientRun, EventId)';
+      echo 'Spanner DB initialized successfully!';
+      "
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    volumes:
+      - ./deployments/docker/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9091:9090" # Expose prometheus UI on 9091 to avoid clash with clinical-record metrics
+    networks:
+      - vincula-net
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - vincula-net
+    depends_on:
+      - prometheus
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686" # Web UI
+      - "4317:4317"   # OTLP gRPC receiver
+    networks:
+      - vincula-net
+
+  clinical-record:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+      - "8080:8080"
+    environment:
+      - SPANNER_EMULATOR_HOST=spanner-emulator:9010
+      - SPANNER_DATABASE=projects/vincula-salud-dev/instances/vincula-instance/databases/vincula_db
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    volumes:
+      - ./certs:/app/certs:ro
+    depends_on:
+      - spanner-init
+      - jaeger
+    networks:
+      - vincula-net
+
+networks:
+  vincula-net:
+    driver: bridge

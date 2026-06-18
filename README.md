@@ -143,7 +143,31 @@ VINCULA Salud/
 
 ## Ejecución Local
 
-### 1. Clonar y configurar
+### Opción 1: Pruébalo rápido (Docker Compose)
+
+Si tienes Docker instalado y ya generaste los certificados (ver paso 3 abajo), puedes levantar **toda** la infraestructura (Servidor, Spanner Emulator, Jaeger, Prometheus y Grafana) con un solo comando:
+
+```bash
+docker-compose up -d
+```
+
+Luego, prueba que todo funciona ejecutando el cliente de ejemplo en Go, que hará peticiones reales por gRPC usando mTLS:
+
+```bash
+go run examples/client/main.go
+```
+
+**Servicios disponibles:**
+- **gRPC Server:** `localhost:50051`
+- **Grafana (Dashboards):** [http://localhost:3000](http://localhost:3000) (User/Pass: `admin` / `admin`)
+- **Jaeger (Trazas distribuidas):** [http://localhost:16686](http://localhost:16686)
+- **Prometheus:** [http://localhost:9091](http://localhost:9091)
+
+---
+
+### Opción 2: Desarrollo manual
+
+#### 1. Clonar y configurar
 
 ```bash
 git clone https://github.com/ciddiazIsaac/Vincula-Salud.git
