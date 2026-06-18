@@ -22,7 +22,9 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 	clinicalv1 "github.com/minsal/vincula/api/v1/clinical"
-	"github.com/minsal/vincula/internal/adapters"
+	grpcadapter "github.com/minsal/vincula/internal/adapters/grpc"
+	"github.com/minsal/vincula/internal/adapters/storage"
+	"github.com/minsal/vincula/internal/core/usecases"
 	"github.com/minsal/vincula/internal/middleware"
 	"github.com/minsal/vincula/internal/telemetry"
 )
@@ -49,12 +51,15 @@ func main() {
 		database = "projects/vincula-salud-dev/instances/vincula-instance/databases/vincula_db"
 	}
 
-	store, err := adapters.NewSpannerClinicalStore(ctx, database)
+	repo, spannerClient, err := storage.NewSpannerClinicalRepo(ctx, database)
 	if err != nil {
 		slog.Error("Failed to connect to Spanner", "error", err)
 		os.Exit(1)
 	}
-	defer store.Close()
+	defer spannerClient.Close()
+
+	useCase := usecases.NewClinicalUseCase(repo)
+	clinicalServer := grpcadapter.NewClinicalServer(useCase)
 
 	// Cargar certificados mTLS
 	cert, err := tls.LoadX509KeyPair("certs/server.crt", "certs/server.key")
@@ -100,7 +105,7 @@ func main() {
 	)
 
 	// Registrar servicios
-	clinicalv1.RegisterClinicalRecordServiceServer(srv, store)
+	clinicalv1.RegisterClinicalRecordServiceServer(srv, clinicalServer)
 
 	// Registrar métricas gRPC de Prometheus
 	grpc_prometheus.Register(srv)
