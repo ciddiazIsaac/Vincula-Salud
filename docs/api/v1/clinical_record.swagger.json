@@ -1,0 +1,321 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "api/v1/clinical_record.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ClinicalRecordService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/patients/{patientRun}/consent:revoke": {
+      "post": {
+        "operationId": "ClinicalRecordService_RevokeConsent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RevokeConsentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "patientRun",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ClinicalRecordServiceRevokeConsentBody"
+            }
+          }
+        ],
+        "tags": [
+          "ClinicalRecordService"
+        ]
+      }
+    },
+    "/v1/patients/{patientRun}/events": {
+      "get": {
+        "operationId": "ClinicalRecordService_ListClinicalEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListClinicalEventsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "patientRun",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "eventTypeFilter",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ClinicalRecordService"
+        ]
+      },
+      "post": {
+        "operationId": "ClinicalRecordService_RecordClinicalEvent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ClinicalEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "patientRun",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ClinicalRecordServiceRecordClinicalEventBody"
+            }
+          }
+        ],
+        "tags": [
+          "ClinicalRecordService"
+        ]
+      }
+    },
+    "/v1/patients/{patientRun}/summary": {
+      "get": {
+        "operationId": "ClinicalRecordService_GetPatientSummary",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PatientSummary"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "patientRun",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "requesterHospitalId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ClinicalRecordService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ClinicalRecordServiceRecordClinicalEventBody": {
+      "type": "object",
+      "properties": {
+        "eventType": {
+          "type": "string"
+        },
+        "eventDataJson": {
+          "type": "string",
+          "format": "byte"
+        },
+        "authorCredential": {
+          "type": "string"
+        },
+        "eventTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "ClinicalRecordServiceRevokeConsentBody": {
+      "type": "object",
+      "properties": {
+        "dataCategory": {
+          "type": "string"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ClinicalEvent": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "patientRun": {
+          "type": "string"
+        },
+        "eventType": {
+          "type": "string"
+        },
+        "eventDataJson": {
+          "type": "string",
+          "format": "byte"
+        },
+        "authorCredential": {
+          "type": "string"
+        },
+        "recordedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "eventTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ListClinicalEventsResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ClinicalEvent"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1PatientSummary": {
+      "type": "object",
+      "properties": {
+        "patientRun": {
+          "type": "string"
+        },
+        "activeAllergies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "activeDiagnoses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "activeMedications": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lastUpdate": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1RevokeConsentResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
