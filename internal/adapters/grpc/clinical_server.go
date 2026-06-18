@@ -7,6 +7,7 @@ import (
 	clinicalv1 "github.com/minsal/vincula/api/v1/clinical"
 	"github.com/minsal/vincula/internal/core/domain"
 	"github.com/minsal/vincula/internal/core/ports"
+	"github.com/minsal/vincula/internal/telemetry"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -50,8 +51,11 @@ func (s *ClinicalServer) RecordClinicalEvent(ctx context.Context, req *clinicalv
 
 	savedEvent, err := s.useCase.RecordClinicalEvent(ctx, event)
 	if err != nil {
+		telemetry.BusinessErrors.Inc()
 		return nil, err
 	}
+
+	telemetry.EventsRecorded.WithLabelValues(savedEvent.EventType).Inc()
 
 	return &clinicalv1.ClinicalEvent{
 		EventId:          savedEvent.EventID,

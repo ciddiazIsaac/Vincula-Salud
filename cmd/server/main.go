@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/time/rate"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health"
@@ -58,7 +60,9 @@ func main() {
 	}
 	defer spannerClient.Close()
 
-	useCase := usecases.NewClinicalUseCase(repo)
+	cbRepo := storage.NewCircuitBreakerRepo(repo)
+
+	useCase := usecases.NewClinicalUseCase(cbRepo)
 	clinicalServer := grpcadapter.NewClinicalServer(useCase)
 
 	// Cargar certificados mTLS
@@ -88,18 +92,23 @@ func main() {
 
 	creds := credentials.NewTLS(tlsConfig)
 
-	// Build interceptor chain: Auth → Validation → Audit → Prometheus → OTel
+	// Initialize Rate Limiter
+	rl := middleware.NewRateLimiter(rate.Limit(10), 20)
+
+	// Build interceptor chain: Auth → RateLimit → Validation → Audit → Prometheus → OTel
 	srv := grpc.NewServer(
 		grpc.Creds(creds),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			middleware.AuthUnaryInterceptor,
+			middleware.RateLimitUnaryInterceptor(rl),
 			middleware.ValidationUnaryInterceptor,
 			middleware.AuditUnaryInterceptor,
 			grpc_prometheus.UnaryServerInterceptor,
 		),
 		grpc.ChainStreamInterceptor(
 			middleware.AuthStreamInterceptor,
+			middleware.RateLimitStreamInterceptor(rl),
 			grpc_prometheus.StreamServerInterceptor,
 		),
 	)
