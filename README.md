@@ -244,6 +244,8 @@ make run-bridge
 
 ## API gRPC
 
+> 📚 **Documentación Interactiva (Swagger UI):** Puedes explorar la API abriendo el archivo local [`docs/index.html`](docs/index.html) en tu navegador, o (si tienes el proyecto en GitHub) habilitando GitHub Pages en **Settings > Pages** para que el workflow de CI/CD lo publique automáticamente.
+
 El servicio `ClinicalRecordService` expone los siguientes RPCs, definidos en [`clinical_record.proto`](api/v1/clinical_record.proto):
 
 | RPC | Descripción | HTTP (gRPC-Gateway) |
