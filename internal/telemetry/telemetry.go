@@ -26,7 +26,7 @@ func Init(ctx context.Context, serviceName string) (*sdktrace.TracerProvider, er
 	res, err := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
-			semconv.SchemaURL,
+			"", // empty schema URL avoids conflict
 			semconv.ServiceName(serviceName),
 		),
 	)
