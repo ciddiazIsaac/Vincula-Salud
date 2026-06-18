@@ -2,13 +2,12 @@ package adapters
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"log/slog"
 	"time"
 
 	"cloud.google.com/go/spanner"
+	"github.com/google/uuid"
 	clinicalv1 "github.com/minsal/vincula/api/v1/clinical"
 	"go.opentelemetry.io/otel"
 	"google.golang.org/api/iterator"
@@ -40,13 +39,17 @@ func (s *SpannerClinicalStore) GetPatientSummary(ctx context.Context, req *clini
 	defer span.End()
 	slog.InfoContext(ctx, "Fetching patient summary", "patient_run", req.PatientRun)
 
+	// Add explicit timeout for Spanner query
+	queryCtx, queryCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer queryCancel()
+
 	stmt := spanner.Statement{
 		SQL: `SELECT event_type, event_data_json FROM clinical_events 
               WHERE patient_run = @run 
               ORDER BY event_timestamp DESC LIMIT 10`,
 		Params: map[string]interface{}{"run": req.PatientRun},
 	}
-	iter := s.client.Single().Query(ctx, stmt)
+	iter := s.client.Single().Query(queryCtx, stmt)
 	defer iter.Stop()
 
 	summary := &clinicalv1.PatientSummary{
@@ -67,7 +70,10 @@ func (s *SpannerClinicalStore) GetPatientSummary(ctx context.Context, req *clini
 			return nil, err
 		}
 		var data map[string]interface{}
-		json.Unmarshal(dataBytes, &data)
+		if err := json.Unmarshal(dataBytes, &data); err != nil {
+			slog.WarnContext(ctx, "Failed to unmarshal event data", "error", err, "patient_run", req.PatientRun)
+			continue
+		}
 		switch eventType {
 		case "allergy":
 			if val, ok := data["alergia"]; ok {
@@ -93,9 +99,7 @@ func (s *SpannerClinicalStore) RecordClinicalEvent(ctx context.Context, req *cli
 	defer span.End()
 	slog.InfoContext(ctx, "Recording clinical event", "patient_run", req.PatientRun, "event_type", req.EventType)
 
-	idBytes := make([]byte, 16)
-	rand.Read(idBytes)
-	eventID := hex.EncodeToString(idBytes)
+	eventID := uuid.New().String()
 
 	eventTimestamp := req.EventTimestamp
 	if eventTimestamp == nil {
@@ -107,7 +111,9 @@ func (s *SpannerClinicalStore) RecordClinicalEvent(ctx context.Context, req *cli
 		[]string{"event_id", "patient_run", "event_type", "event_data_json", "author_credential", "recorded_at", "event_timestamp"},
 		[]interface{}{eventID, req.PatientRun, req.EventType, req.EventDataJson, req.AuthorCredential, recordedAt.AsTime(), eventTimestamp.AsTime()})
 
-	_, err := s.client.Apply(ctx, []*spanner.Mutation{mutation})
+	applyCtx, applyCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer applyCancel()
+	_, err := s.client.Apply(applyCtx, []*spanner.Mutation{mutation})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to insert: %v", err)
 	}
@@ -143,8 +149,12 @@ func (s *SpannerClinicalStore) ListClinicalEvents(ctx context.Context, req *clin
 	if req.PageToken != "" {
 		// simplified: ignore pagination token for now
 	}
+	// Add explicit timeout for Spanner query
+	listCtx, listCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer listCancel()
+
 	stmt := spanner.Statement{SQL: sql, Params: params}
-	iter := s.client.Single().Query(ctx, stmt)
+	iter := s.client.Single().Query(listCtx, stmt)
 	defer iter.Stop()
 
 	var events []*clinicalv1.ClinicalEvent
@@ -178,7 +188,9 @@ func (s *SpannerClinicalStore) RevokeConsent(ctx context.Context, req *clinicalv
 	mutation := spanner.InsertOrUpdate("patient_consent",
 		[]string{"patient_run", "data_category", "revoked_at"},
 		[]interface{}{req.PatientRun, req.DataCategory, time.Now()})
-	_, err := s.client.Apply(ctx, []*spanner.Mutation{mutation})
+	applyCtx, applyCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer applyCancel()
+	_, err := s.client.Apply(applyCtx, []*spanner.Mutation{mutation})
 	if err != nil {
 		return &clinicalv1.RevokeConsentResponse{Success: false, Message: err.Error()}, nil
 	}

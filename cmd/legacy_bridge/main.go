@@ -37,7 +37,7 @@ func main() {
 	}
 	creds := credentials.NewTLS(tlsConfig)
 
-	conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(creds))
 	if err != nil {
 		log.Fatal(err)
 	}

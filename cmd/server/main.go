@@ -8,7 +8,9 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"sync/atomic"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -21,10 +23,9 @@ import (
 
 	clinicalv1 "github.com/minsal/vincula/api/v1/clinical"
 	"github.com/minsal/vincula/internal/adapters"
+	"github.com/minsal/vincula/internal/middleware"
 	"github.com/minsal/vincula/internal/telemetry"
 )
-
-var isReady atomic.Bool
 
 func main() {
 	ctx := context.Background()
@@ -35,7 +36,9 @@ func main() {
 		slog.Error("Failed to initialize telemetry", "error", err)
 	} else {
 		defer func() {
-			if err := tp.Shutdown(context.Background()); err != nil {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := tp.Shutdown(shutdownCtx); err != nil {
 				slog.Error("Failed to shutdown tracer provider", "error", err)
 			}
 		}()
@@ -53,8 +56,6 @@ func main() {
 	}
 	defer store.Close()
 
-	isReady.Store(true)
-
 	// Cargar certificados mTLS
 	cert, err := tls.LoadX509KeyPair("certs/server.crt", "certs/server.key")
 	if err != nil {
@@ -68,21 +69,34 @@ func main() {
 		os.Exit(1)
 	}
 	caPool := x509.NewCertPool()
-	caPool.AppendCertsFromPEM(caCert)
+	if !caPool.AppendCertsFromPEM(caCert) {
+		slog.Error("Failed to parse CA certificate")
+		os.Exit(1)
+	}
 
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		ClientCAs:    caPool,
-		MinVersion:   tls.VersionTLS12,
+		MinVersion:   tls.VersionTLS13,
 	}
 
 	creds := credentials.NewTLS(tlsConfig)
+
+	// Build interceptor chain: Auth → Validation → Audit → Prometheus → OTel
 	srv := grpc.NewServer(
 		grpc.Creds(creds),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
-		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
-		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+		grpc.ChainUnaryInterceptor(
+			middleware.AuthUnaryInterceptor,
+			middleware.ValidationUnaryInterceptor,
+			middleware.AuditUnaryInterceptor,
+			grpc_prometheus.UnaryServerInterceptor,
+		),
+		grpc.ChainStreamInterceptor(
+			middleware.AuthStreamInterceptor,
+			grpc_prometheus.StreamServerInterceptor,
+		),
 	)
 
 	// Registrar servicios
@@ -91,30 +105,68 @@ func main() {
 	// Registrar métricas gRPC de Prometheus
 	grpc_prometheus.Register(srv)
 
-	// Servidor HTTP para métricas de Prometheus
-	go func() {
-		http.Handle("/metrics", promhttp.Handler())
-		slog.Info("Metrics server started", "port", 9090)
-		if err := http.ListenAndServe(":9090", nil); err != nil {
-			slog.Error("Failed to serve metrics", "error", err)
-		}
-	}()
-
 	// Health check gRPC estándar
 	healthSrv := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(srv, healthSrv)
 	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthSrv.SetServingStatus("clinical-record", grpc_health_v1.HealthCheckResponse_SERVING)
 
+	// Servidor HTTP dedicado para métricas de Prometheus (con mux aislado y timeouts)
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("/metrics", promhttp.Handler())
+	metricsServer := &http.Server{
+		Addr:         ":9090",
+		Handler:      metricsMux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+	go func() {
+		slog.Info("Metrics server started", "port", 9090)
+		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("Metrics server failed", "error", err)
+		}
+	}()
+
+	// Iniciar servidor gRPC
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		slog.Error("Failed to listen", "error", err)
 		os.Exit(1)
 	}
-	slog.Info("VINCULA Salud gRPC server started", "port", 50051, "mtls", true)
-	slog.Info("Health check enabled", "service", "grpc_health_v1.Health/Check")
+
+	slog.Info("VINCULA Salud gRPC server started",
+		"port", 50051,
+		"mtls", true,
+		"tls_min_version", "1.3",
+		"interceptors", []string{"auth", "validation", "audit", "prometheus", "otel"},
+	)
+
+	// Graceful shutdown: escuchar señales del sistema
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		sig := <-sigCh
+		slog.Info("Received shutdown signal, draining connections...", "signal", sig.String())
+
+		// Marcar como no-serving para que K8s deje de enviar tráfico
+		healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+		healthSrv.SetServingStatus("clinical-record", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+
+		// Drenar conexiones gRPC existentes
+		srv.GracefulStop()
+
+		// Apagar servidor de métricas
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := metricsServer.Shutdown(shutdownCtx); err != nil {
+			slog.Error("Metrics server shutdown error", "error", err)
+		}
+
+		slog.Info("Graceful shutdown complete")
+	}()
+
 	if err := srv.Serve(lis); err != nil {
-		slog.Error("Failed to serve", "error", err)
-		os.Exit(1)
+		slog.Error("gRPC server stopped", "error", err)
 	}
 }
