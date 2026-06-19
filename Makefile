@@ -1,7 +1,7 @@
-.PHONY: help setup test build run lint proto emulators-up spanner-init run-bridge
+.PHONY: help setup test test-integration build run lint proto swagger load-test load-test-ghz load-test-hey emulators-up spanner-init run-bridge run-healthcheck run-all
 
 help:
-	@echo "Comandos disponibles: setup, test, build, run, lint, proto, emulators-up, spanner-init, run-bridge"
+	@echo "Comandos disponibles: setup, test, test-integration, build, run, lint, proto, swagger, load-test, load-test-ghz, load-test-hey, emulators-up, spanner-init, run-bridge"
 
 setup:
 	go mod download
@@ -17,6 +17,12 @@ test-integration:
 
 load-test:
 	k6 run --ssl-client-cert certs/client.crt --ssl-client-key certs/client.key tests/load/grpc_load_test.js
+
+load-test-ghz:
+	bash tests/load/run-load-test.sh
+
+load-test-hey:
+	bash tests/load/run-hey.sh
 
 build:
 	go build -o bin/clinical-record ./cmd/server
