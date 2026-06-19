@@ -1,5 +1,9 @@
 # 🏥 VINCULA Salud — Plataforma de Interoperabilidad Sanitaria
 
+[![CI](https://github.com/ciddiazIsaac/Vincula-Salud/actions/workflows/ci.yaml/badge.svg)](https://github.com/ciddiazIsaac/Vincula-Salud/actions/workflows/ci.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ciddiazIsaac/Vincula-Salud)](https://goreportcard.com/report/github.com/ciddiazIsaac/Vincula-Salud)
+[![codecov](https://codecov.io/gh/ciddiazIsaac/Vincula-Salud/branch/main/graph/badge.svg)](https://codecov.io/gh/ciddiazIsaac/Vincula-Salud)
+
 **VINCULA Salud** es un servicio gRPC de alto rendimiento que permite a hospitales del sistema de salud pública de Chile compartir datos clínicos de pacientes de forma segura, estandarizada y en tiempo real. Actúa como el eje central de interoperabilidad: recibe eventos clínicos (diagnósticos, alergias, medicamentos), los persiste en Google Cloud Spanner, y expone resúmenes de historial consolidados a cualquier hospital autorizado de la red.
 
 > **Estado:** Piloto técnico — No usar en producción sin revisión SRE.

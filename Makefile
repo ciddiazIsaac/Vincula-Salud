@@ -1,7 +1,7 @@
-.PHONY: help setup test test-integration build run lint proto swagger load-test load-test-ghz load-test-hey emulators-up spanner-init run-bridge run-healthcheck run-all
+.PHONY: help setup test test-integration build run lint proto swagger load-test load-test-ghz load-test-hey emulators-up spanner-init run-bridge run-healthcheck run-all mutation-test
 
 help:
-	@echo "Comandos disponibles: setup, test, test-integration, build, run, lint, proto, swagger, load-test, load-test-ghz, load-test-hey, emulators-up, spanner-init, run-bridge"
+	@echo "Comandos disponibles: setup, test, test-integration, mutation-test, build, run, lint, proto, swagger, load-test, load-test-ghz, load-test-hey, emulators-up, spanner-init, run-bridge"
 
 setup:
 	go mod download
@@ -14,6 +14,10 @@ test:
 
 test-integration:
 	go test -tags=integration -v ./tests/integration/...
+
+mutation-test:
+	go install github.com/zimmski/go-mutesting/cmd/go-mutesting@latest
+	go-mutesting ./...
 
 load-test:
 	k6 run --ssl-client-cert certs/client.crt --ssl-client-key certs/client.key tests/load/grpc_load_test.js
