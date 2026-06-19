@@ -149,7 +149,7 @@ func startServer(t *testing.T, bundle *tlsBundle) *testServer {
 	}
 
 	repo := storage.NewInMemoryClinicalRepo()
-	uc := usecases.NewClinicalUseCase(repo)
+	uc := usecases.NewClinicalUseCase(repo, nil)
 	svc := grpcadapter.NewClinicalServer(uc)
 
 	srv := grpc.NewServer(grpc.Creds(credentials.NewTLS(serverTLS)))

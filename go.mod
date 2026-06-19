@@ -3,6 +3,7 @@ module github.com/minsal/vincula
 go 1.25.8
 
 require (
+	cloud.google.com/go/pubsub v1.50.2
 	cloud.google.com/go/spanner v1.92.0
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
@@ -15,6 +16,11 @@ require (
 	google.golang.org/api v0.284.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
+)
+
+require (
+	cloud.google.com/go/iam v1.11.0 // indirect
+	cloud.google.com/go/pubsub/v2 v2.4.0 // indirect
 )
 
 require (

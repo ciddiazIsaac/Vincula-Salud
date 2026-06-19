@@ -12,11 +12,15 @@ import (
 )
 
 type clinicalUseCase struct {
-	repo ports.ClinicalRecordRepository
+	repo      ports.ClinicalRecordRepository
+	publisher ports.EventPublisher
 }
 
-func NewClinicalUseCase(repo ports.ClinicalRecordRepository) ports.ClinicalRecordUseCase {
-	return &clinicalUseCase{repo: repo}
+func NewClinicalUseCase(repo ports.ClinicalRecordRepository, publisher ports.EventPublisher) ports.ClinicalRecordUseCase {
+	return &clinicalUseCase{
+		repo:      repo,
+		publisher: publisher,
+	}
 }
 
 func (uc *clinicalUseCase) GetPatientSummary(ctx context.Context, patientRun string) (*domain.PatientSummary, error) {
@@ -81,6 +85,16 @@ func (uc *clinicalUseCase) RecordClinicalEvent(ctx context.Context, event *domai
 
 	if err := uc.repo.SaveEvent(ctx, event); err != nil {
 		return nil, err
+	}
+
+	// Emitir evento asíncrono si el publisher está disponible
+	if uc.publisher != nil {
+		if err := uc.publisher.PublishClinicalEventRecorded(ctx, event); err != nil {
+			// Solo logueamos el error, no fallamos la operación principal (Eventual Consistency)
+			slog.ErrorContext(ctx, "Failed to publish clinical event", "error", err, "event_id", event.EventID)
+		} else {
+			slog.InfoContext(ctx, "Clinical event published successfully", "event_id", event.EventID)
+		}
 	}
 
 	return event, nil

@@ -26,6 +26,7 @@ import (
 	clinicalv1 "github.com/minsal/vincula/api/v1/clinical"
 	grpcadapter "github.com/minsal/vincula/internal/adapters/grpc"
 	"github.com/minsal/vincula/internal/adapters/storage"
+	"github.com/minsal/vincula/internal/adapters/broker"
 	"github.com/minsal/vincula/internal/core/usecases"
 	"github.com/minsal/vincula/internal/middleware"
 	"github.com/minsal/vincula/internal/telemetry"
@@ -62,7 +63,19 @@ func main() {
 
 	cbRepo := storage.NewCircuitBreakerRepo(repo)
 
-	useCase := usecases.NewClinicalUseCase(cbRepo)
+	// Setup Pub/Sub Publisher
+	projectID := os.Getenv("GCP_PROJECT_ID")
+	if projectID == "" {
+		projectID = "vincula-salud-dev"
+	}
+	pubsubPublisher, err := broker.NewPubSubPublisher(projectID, "clinical-events-topic")
+	if err != nil {
+		slog.Warn("Failed to initialize PubSub publisher, events will not be published", "error", err)
+	} else {
+		defer pubsubPublisher.Close()
+	}
+
+	useCase := usecases.NewClinicalUseCase(cbRepo, pubsubPublisher)
 	clinicalServer := grpcadapter.NewClinicalServer(useCase)
 
 	// Cargar certificados mTLS
