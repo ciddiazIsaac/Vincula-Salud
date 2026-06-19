@@ -42,10 +42,21 @@ func AuditUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.Unar
 		resultCode = status.Code(err)
 	}
 
+	// Extract JWT Claims if present
+	claims, hasClaims := ClaimsFromContext(ctx)
+	userID := "anonymous"
+	hospitalID := "unknown"
+	if hasClaims {
+		userID = claims.UserID
+		hospitalID = claims.HospitalID
+	}
+
 	// Emit structured audit log entry
 	slog.InfoContext(ctx, "AUDIT",
 		"caller_cn", callerCN,
 		"caller_org", callerOrg,
+		"user_id", userID,
+		"hospital_id", hospitalID,
 		"method", info.FullMethod,
 		"patient_run", patientRun,
 		"result_code", resultCode.String(),

@@ -108,12 +108,13 @@ func main() {
 	// Initialize Rate Limiter
 	rl := middleware.NewRateLimiter(rate.Limit(10), 20)
 
-	// Build interceptor chain: Auth → RateLimit → Validation → Audit → Prometheus → OTel
+	// Build interceptor chain: Auth → JWTAuth → RateLimit → Validation → Audit → Prometheus → OTel
 	srv := grpc.NewServer(
 		grpc.Creds(creds),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			middleware.AuthUnaryInterceptor,
+			middleware.JWTAuthUnaryInterceptor,
 			middleware.RateLimitUnaryInterceptor(rl),
 			middleware.ValidationUnaryInterceptor,
 			middleware.AuditUnaryInterceptor,
@@ -121,6 +122,7 @@ func main() {
 		),
 		grpc.ChainStreamInterceptor(
 			middleware.AuthStreamInterceptor,
+			middleware.JWTAuthStreamInterceptor,
 			middleware.RateLimitStreamInterceptor(rl),
 			grpc_prometheus.StreamServerInterceptor,
 		),
@@ -166,7 +168,7 @@ func main() {
 		"port", 50051,
 		"mtls", true,
 		"tls_min_version", "1.3",
-		"interceptors", []string{"auth", "validation", "audit", "prometheus", "otel"},
+		"interceptors", []string{"auth", "jwt_auth", "validation", "audit", "prometheus", "otel"},
 	)
 
 	// Graceful shutdown: escuchar señales del sistema
