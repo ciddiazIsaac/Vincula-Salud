@@ -8,6 +8,10 @@ dist/
 node_modules/
 vendor/
 
+# Protoc (descargar localmente, no versionar)
+protoc.zip
+protoc_dir/
+
 # Entornos y secretos
 .env
 .env.local

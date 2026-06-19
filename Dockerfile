@@ -13,15 +13,19 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/clinical-record .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/healthcheck ./cmd/healthcheck
 
 # Final stage
-FROM alpine:3.18
+FROM alpine:3.21
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates wget && \
+RUN apk add --no-cache ca-certificates tini wget && \
     wget -qO/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.24/grpc_health_probe-linux-amd64 && \
-    chmod +x /bin/grpc_health_probe
+    chmod +x /bin/grpc_health_probe && \
+    addgroup -S vincula && adduser -S vincula -G vincula
+
 COPY --from=builder /bin/clinical-record /usr/local/bin/
 COPY --from=builder /bin/healthcheck /usr/local/bin/
+
+USER vincula
 
 EXPOSE 50051 8080 9090
 
@@ -29,5 +33,6 @@ EXPOSE 50051 8080 9090
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD grpc_health_probe -addr=localhost:50051 || exit 1
 
-# Comando principal usando tini para manejo de señales
-ENTRYPOINT ["/usr/local/bin/clinical-record"]
+# tini como PID 1 para manejo correcto de señales y zombie reaping
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["/usr/local/bin/clinical-record"]

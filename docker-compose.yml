@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   spanner-emulator:
     image: gcr.io/cloud-spanner-emulator/emulator:latest

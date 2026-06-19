@@ -20,18 +20,19 @@ func main() {
 
 	mux.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(HealthResponse{Status: "alive"})
+		_ = json.NewEncoder(w).Encode(HealthResponse{Status: "alive"})
 	})
 
 	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 		// Verificar conexión a Spanner
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(HealthResponse{Status: "ready"})
+		_ = json.NewEncoder(w).Encode(HealthResponse{Status: "ready"})
 	})
 
 	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
+		Addr:              ":8080",
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	go func() {
@@ -47,5 +48,5 @@ func main() {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	srv.Shutdown(shutdownCtx)
+	_ = srv.Shutdown(shutdownCtx)
 }

@@ -1,0 +1,24 @@
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gocritic
+    - gosec
+
+linters-settings:
+  gosec:
+    excludes:
+      - G101  # hardcoded credentials false positives
+
+issues:
+  exclude-dirs:
+    - api/v1  # protobuf generated code

@@ -1,6 +1,10 @@
 name: CI
 
 on:
+  push:
+    branches:
+      - main
+      - master
   pull_request:
     branches:
       - main
@@ -23,10 +27,7 @@ jobs:
         run: go mod download
 
       - name: Lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          args: --timeout=5m
+        run: go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5 run --timeout=5m
 
       - name: Test (Unit)
         run: make test
@@ -36,6 +37,12 @@ jobs:
 
       - name: Build Go binary
         run: make build
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.out
+          fail_ci_if_error: false
 
       - name: Build Docker Image (Dry Run)
         run: docker build -t vincula-salud:test .

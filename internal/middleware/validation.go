@@ -19,8 +19,6 @@ const (
 	maxEventDataSize = 1 * 1024 * 1024
 	// maxPageSize is the maximum allowed page size for list operations.
 	maxPageSize = 1000
-	// defaultPageSize is the default page size when none is specified.
-	defaultPageSize = 100
 )
 
 // validRunRegex matches a Chilean RUN in the format "12345678-9" or "12.345.678-K".

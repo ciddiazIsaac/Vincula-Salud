@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub" //nolint:staticcheck
 	"github.com/minsal/vincula/internal/core/domain"
 )
 

@@ -23,9 +23,7 @@ func TestExtractIdentity(t *testing.T) {
 	}{
 		{
 			name: "no peer info",
-			setupCtx: func() context.Context {
-				return context.Background()
-			},
+			setupCtx: context.Background,
 			wantErr:  true,
 			wantCode: codes.Unauthenticated,
 		},

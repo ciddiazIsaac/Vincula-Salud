@@ -47,12 +47,12 @@ func main() {
 	// Resto igual que antes
 	f, err := os.Open("data/legacy_patients.csv")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err) //nolint:gocritic // defer will not run on startup failure, which is acceptable
 	}
 	defer f.Close()
 
 	r := csv.NewReader(f)
-	r.Read() // encabezados
+	_, _ = r.Read() // encabezados
 	for {
 		record, err := r.Read()
 		if err == io.EOF {

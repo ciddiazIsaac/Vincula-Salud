@@ -57,7 +57,7 @@ func main() {
 	repo, spannerClient, err := storage.NewSpannerClinicalRepo(ctx, database)
 	if err != nil {
 		slog.Error("Failed to connect to Spanner", "error", err)
-		os.Exit(1)
+		os.Exit(1) //nolint:gocritic // defer will not run on startup failure, which is acceptable
 	}
 	defer spannerClient.Close()
 
@@ -158,7 +158,7 @@ func main() {
 	}()
 
 	// Iniciar servidor gRPC
-	lis, err := net.Listen("tcp", ":50051")
+	lis, err := net.Listen("tcp", ":50051") //nolint:gosec // intentional binding to all interfaces in container
 	if err != nil {
 		slog.Error("Failed to listen", "error", err)
 		os.Exit(1)

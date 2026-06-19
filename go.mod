@@ -5,6 +5,7 @@ go 1.25.8
 require (
 	cloud.google.com/go/pubsub v1.50.2
 	cloud.google.com/go/spanner v1.92.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/prometheus/client_golang v1.23.2
@@ -21,7 +22,6 @@ require (
 require (
 	cloud.google.com/go/iam v1.11.0 // indirect
 	cloud.google.com/go/pubsub/v2 v2.4.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 )
 
 require (
